@@ -1,0 +1,836 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Custom Objects - Record List UX</title>
+<style>[hidden]:not([hidden=until-found i]){display:none!important}img{max-width:100%}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one page with three sections. Stories holds every deal and general capability in one filterable table. The two UI sections pair the general list-view stories with an interactive Cars list. Page chrome follows light/dark, everything inside .ui is a fixed-light replica. */
+:root{
+  --bg:#f6f7f5; --surface:#ffffff; --surface2:#f0f2ee; --fg:#1f2a24; --muted:#5d6a62; --line:#dde2dc;
+  --accent:#017737; --accent-soft:#e1f1e8;
+  --warn:#9a5b00; --warn-soft:#fdf1da; --danger:#b3261e; --danger-soft:#fbe5e3; --info:#1d5fa8; --info-soft:#e3eefa;
+  --vio:#6a3fb0; --vio-soft:#eee6fa;
+  --font:'Source Sans 3',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --ui-font:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; color-scheme:light;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;padding-inline:16px}
+h1,h2,h3,h4{margin:0;text-wrap:balance;line-height:1.2}
+p{margin:0}
+.wrap{max-width:1180px;margin-inline:auto;padding-block:28px 64px}
+header.top{display:flex;flex-direction:column;gap:6px;padding-bottom:20px}
+header.top .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+header.top h1{font-size:30px;font-weight:700}
+header.top p{color:var(--muted);max-width:72ch}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid #0a64d7;outline-offset:2px}
+.panel{padding-top:24px;display:flex;flex-direction:column;gap:28px}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-size:12.5px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.box h3{font-size:16px}
+.assume{display:flex;flex-direction:column;gap:6px;padding-left:18px;margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;color:var(--muted);font-size:13px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border:0;background:none;color:var(--muted);cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.btn-s{font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);cursor:pointer}
+.btn-s:hover{border-color:var(--accent);color:var(--accent)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.tag.see{color:var(--info);background:var(--info-soft)}
+.tag.do{color:var(--vio);background:var(--vio-soft)}
+.tag.plain{color:var(--muted);background:var(--surface2)}
+.tag.bad{color:var(--danger);background:var(--danger-soft)}
+.tag.warn{color:var(--warn);background:var(--warn-soft)}
+a.chip{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 7px;text-decoration:none;white-space:nowrap}
+a.chip.d{color:var(--info);background:var(--info-soft)}
+a.chip:hover{text-decoration:underline}
+
+.tbl-wrap{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+table.dt{width:100%;border-collapse:collapse;min-width:900px;font-size:14px}
+table.dt th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface2);white-space:nowrap}
+table.dt td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+table.dt tr:last-child td{border-bottom:0}
+table.dt td.num{font-family:var(--mono);font-size:12.5px;color:var(--muted);width:56px}
+table.dt td.cap{width:22%}
+table.dt td.cap b{display:block;font-weight:600;margin-bottom:4px}
+table.dt td.pf{width:110px;font-size:13px;color:var(--muted)}
+table.dt td.pf span{display:block}
+table.dt td.us{width:38%}
+table.dt td.us p+p{margin-top:4px}
+table.dt td.us ul{margin:0;padding-left:18px}
+table.dt td.us .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent);margin-right:6px}
+table.dt td.go{width:16%;font-size:13px}
+table.dt td.go small{display:block;color:var(--muted);margin-top:4px;line-height:1.35}
+tr.flash td{background:var(--warn-soft)}
+.filters{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.fgroup{display:flex;gap:8px;align-items:center}
+.fgroup>span{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+.stage-title{display:flex;flex-direction:column;gap:2px}
+.stage-title h2{font-size:18px}
+.stage-title p{color:var(--muted);font-size:14px;max-width:80ch}
+.stage{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.stage[data-ids="off"] .ref{display:none}
+.cap{font-size:12.5px;color:var(--muted)}
+.hcard{position:fixed;z-index:200;max-width:360px;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.22);padding:12px 14px;pointer-events:none;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.hcard .hh{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.hcard .hh b{font-size:15px}
+.hcard ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.hcard p{margin:0}
+.hcard .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent);margin-right:6px}
+
+/* ---------- .ui : fixed-light replica of the app UI ---------- */
+.ui{--accent:#017737;--accent-soft:#e3f2e9;--muted:#6d7278;--line:#e6e8ea;--fg:#26292c;
+  background:#fff;color:var(--fg);font-family:var(--ui-font);font-size:14px;line-height:1.4;color-scheme:light;
+  border:1px solid #dcdfe2;border-radius:8px;min-width:0;overflow:hidden;position:relative}
+.ui a{color:#0a64d7;text-decoration:none;font-weight:500}
+.ui a:hover{text-decoration:underline}
+.ui .btn{font:inherit;font-weight:600;font-size:14px;border-radius:6px;padding:7px 14px;border:1px solid #cdd1d5;background:#fff;color:#26292c;cursor:pointer;box-shadow:0 1px 0 rgba(0,0,0,.04);white-space:nowrap}
+.ui .btn:hover{border-color:#9aa1a8}
+.ui .btn.primary{background:#017737;color:#fff;border-color:#017737}
+.ui .btn.danger{background:#c0221a;color:#fff;border-color:#c0221a}
+.ui .btn.sm{padding:4px 10px;font-size:13px}
+.ui .btn.on{background:#e3f2e9;border-color:#017737;color:#017737}
+.ui input[type=text],.ui select,.ui textarea{font:inherit;font-size:14px;padding:8px 10px;border:1px solid #cdd1d5;border-radius:6px;background:#fff;color:#26292c;min-width:0;max-width:100%;width:100%}
+.ui textarea{resize:vertical;min-height:84px}
+.ui .ref{display:inline-block;font:500 10px var(--mono);background:#26292c;color:#fff;border-radius:3px;padding:0 5px;margin-left:5px;vertical-align:middle;line-height:16px;letter-spacing:.02em;white-space:nowrap}
+.ui .ref.a{background:#017737}
+.av{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#3b6ea5;color:#fff;font-weight:600;font-size:12px;flex:none}
+.av.sm{width:22px;height:22px;font-size:10px}
+.av.c2{background:#8a5a9e}.av.c3{background:#b0722b}
+.ico{font:inherit;border:1px solid #cdd1d5;background:#fff;color:#4b5057;border-radius:6px;min-width:28px;height:28px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:13px;padding:0 6px}
+.ico:hover{color:#017737;border-color:#017737}
+.caution{color:#9a5b00;background:#fdf1da;border-radius:999px;font-weight:600;font-size:12px;padding:1px 8px;white-space:nowrap;cursor:help;display:inline-flex;gap:4px;align-items:center}
+.pill{display:inline-flex;font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;background:#eef0f2;color:#4b5057;white-space:nowrap}
+.pill.green{background:#c9ecd6;color:#0b5a2a}.pill.blue{background:#e4eefb;color:#0a64d7}.pill.amber{background:#fdf1da;color:#9a5b00}.pill.grey{background:#e6e8ea;color:#4b5057}
+.menu{position:absolute;z-index:50;min-width:230px;max-width:340px;background:#fff;border:1px solid #cdd1d5;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.16);padding:6px 0;font-size:14px;max-height:380px;overflow:auto}
+.menu button{display:flex;justify-content:space-between;gap:14px;align-items:center;width:100%;text-align:left;padding:8px 14px;background:none;border:0;font:inherit;color:#26292c;cursor:pointer}
+.menu button:hover,.menu button:focus-visible{background:#f3f4f5}
+.menu button small{color:#6d7278;font-size:12px}
+.menu button.on{background:#eef7f1;font-weight:600}
+.menu .sep{height:1px;background:#e6e8ea;margin:4px 0}
+.menu .gh{padding:6px 14px 2px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6d7278}
+.menu .pad{padding:8px 14px;color:#4b5057;font-size:13.5px}
+.menu .sr{padding:4px 10px 6px}
+.menu .dng{color:#c0221a}
+.menu .chk{width:16px;color:#017737;font-weight:700}
+.menu .lbl{display:flex;gap:8px;align-items:center}
+.lh{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #e6e8ea;flex-wrap:wrap}
+.lh h2{font-size:22px;font-weight:500;line-height:1.15}
+.oi{width:38px;height:38px;border-radius:8px;background:#e4eefb;display:flex;align-items:center;justify-content:center;flex:none}
+.sp{flex:1}
+.live{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#0b5a2a;font-weight:600}
+.live i{width:7px;height:7px;border-radius:50%;background:#1f8b4c;animation:pl 2s infinite}
+@keyframes pl{50%{opacity:.35}}
+.seg2{display:inline-flex;border:1px solid #cdd1d5;border-radius:6px;overflow:hidden}
+.seg2 button{font:inherit;font-size:13px;font-weight:600;border:0;background:#fff;padding:5px 12px;cursor:pointer;color:#4b5057}
+.seg2 button[aria-pressed="true"]{background:#e3f2e9;color:#017737}
+.lb{display:flex;flex-direction:column;gap:8px;padding:10px 16px;border-bottom:1px solid #e6e8ea;background:#fff}
+.lbr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lbr .k{font-size:12px;color:#6d7278;font-weight:600}
+.qf{display:flex;gap:4px;flex-wrap:wrap}
+.qf button{font:inherit;font-size:13px;font-weight:500;border:1px solid #dcdfe2;background:#fff;border-radius:999px;padding:3px 12px;cursor:pointer;color:#26292c}
+.qf button[aria-pressed="true"]{background:#e3f2e9;border-color:#017737;color:#017737;font-weight:600}
+.cchip{display:inline-flex;gap:4px;align-items:center;background:#e4eefb;color:#0a64d7;border-radius:999px;padding:2px 4px 2px 12px;font-size:13px;font-weight:500}
+.cchip button{font:inherit;border:0;background:none;color:inherit;cursor:pointer;border-radius:50%;width:20px;height:20px;line-height:1}
+.cchip button:hover{background:#cfe0f7}
+.lbr .pv{font-size:12px;font-weight:600;color:#9a5b00;background:#fdf1da;border-radius:999px;padding:1px 9px}
+.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px;font-size:14px;border-bottom:1px solid #e6e8ea}
+.banner.warn{background:#fdf6e3}.banner.info{background:#eef4fc}.banner.auto{background:#f1ecfc}.banner.grey{background:#f1f2f4;color:#4b5057}
+.banner .t{flex:1;min-width:200px}
+.bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 16px;background:#eef7f1;border-bottom:1px solid #cfe6d8}
+.bulk b{font-weight:700}
+.bulkn{padding:8px 16px;background:#f6f7f8;border-bottom:1px solid #e6e8ea;font-size:13.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bulkn button{font:inherit;font-weight:600;color:#0a64d7;border:0;background:none;cursor:pointer;padding:0}
+.gw{overflow-x:auto;background:#fff}
+table.g{border-collapse:collapse;table-layout:fixed;font-size:14px}
+table.g th{position:relative;text-align:left;font-weight:600;font-size:13px;color:#4b5057;background:#f6f7f8;border-bottom:1px solid #e1e4e7;border-right:1px solid #eceef0;padding:0 8px 0 12px;height:38px;white-space:nowrap;user-select:none}
+table.g th.dragover{box-shadow:inset 3px 0 0 #017737}
+table.g th .hl{display:flex;align-items:center;gap:4px;min-width:0;height:38px}
+table.g th .hl .lab{overflow:hidden;text-overflow:ellipsis;cursor:pointer;flex:0 1 auto}
+table.g th .hl .srt{color:#017737;font-size:11px}
+table.g th .hl .hm{margin-left:auto;border:0;background:none;cursor:pointer;color:#6d7278;border-radius:4px;width:22px;height:22px;opacity:.55;flex:none}
+table.g th:hover .hm{opacity:1;background:#e6e8ea}
+table.g th .rz{position:absolute;right:-3px;top:0;width:7px;height:100%;cursor:col-resize;z-index:2}
+table.g th .rz:hover{background:#017737;opacity:.4}
+table.g th.cb,table.g td.cb{width:44px;padding:0 0 0 14px}
+table.g th.rm,table.g td.rm{width:50px;padding:0 8px;text-align:center}
+table.g tr.fr th{background:#fff;height:auto;padding:5px 8px 5px 12px;font-weight:400}
+table.g tr.fr input{padding:4px 8px;font-size:13px}
+table.g td{padding:0 12px;height:44px;border-bottom:1px solid #eceef0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.g td[data-ed]:hover{background:#f3f8fe;cursor:text}
+table.g td select,table.g td input{padding:4px 6px;font-size:13.5px}
+table.g tr.sel td{background:#f1f8f4}
+table.g tr.new td{animation:fl 2.4s}
+@keyframes fl{0%,60%{background:#fff6d6}100%{background:transparent}}
+table.g input[type=checkbox]{width:16px;height:16px;accent-color:#017737;cursor:pointer}
+.own{display:inline-flex;align-items:center;gap:7px}
+.lf{display:flex;gap:12px;align-items:center;justify-content:center;padding:12px;color:#6d7278;font-size:13px;border-top:1px solid #eceef0}
+.empty{padding:40px 16px;text-align:center;color:#6d7278;display:flex;flex-direction:column;gap:10px;align-items:center}
+.hcu{position:absolute;z-index:55;width:270px;background:#fff;border:1px solid #cdd1d5;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;pointer-events:none}
+.hcu b{font-size:15px}.hcu small{color:#6d7278}
+.hcu .r{display:flex;gap:10px;align-items:center}
+.ovl{position:absolute;inset:0;background:rgba(20,24,28,.4);display:flex;align-items:flex-start;justify-content:center;padding:70px 14px 14px;z-index:70}
+.dlg{background:#fff;border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.22);width:100%;max-width:500px;overflow:hidden}
+.dlg-h{padding:14px 20px;border-bottom:1px solid #e6e8ea;font-weight:700;font-size:18px}
+.dlg-b{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.dlg-f{padding:12px 20px;border-top:1px solid #e6e8ea;display:flex;gap:10px;justify-content:flex-end}
+.dlg .fl{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;align-items:center}
+.dlg .fl>span{color:#6d7278}
+.chipx{display:inline-flex;gap:6px;align-items:center;background:#eef0f2;border-radius:999px;padding:2px 10px;font-size:13px}
+.cap2{font-size:12.5px;color:#6d7278}
+.dzone{border:2px dashed #cdd1d5;border-radius:8px;padding:22px;text-align:center;color:#6d7278;display:flex;flex-direction:column;gap:8px;align-items:center}
+.mapb{position:relative;height:190px;border:1px solid #dcdfe2;border-radius:8px;background:linear-gradient(135deg,#e9f1ea 0 100%);overflow:hidden}
+.mapb::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 37px,rgba(0,0,0,.05) 37px 38px),repeating-linear-gradient(90deg,transparent 0 59px,rgba(0,0,0,.05) 59px 60px)}
+.pin{position:absolute;transform:translate(-50%,-100%);background:#c0221a;color:#fff;border:2px solid #fff;border-radius:999px;min-width:26px;height:26px;font:700 12px var(--ui-font);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.pin.on{background:#017737}
+.rrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #f0f1f2}
+.rrow:first-child{border-top:0}
+.rrow .t{flex:1;min-width:0}.rrow small{display:block;color:#6d7278}
+.snk{position:fixed;left:16px;bottom:64px;z-index:90;display:flex;gap:12px;align-items:center;background:#26292c;color:#fff;border-radius:8px;padding:10px 14px;font-size:14px;max-width:calc(100vw - 32px);box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.snk.err{background:#8e1a14}
+.snk .pb{width:110px;height:6px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden}
+.snk .pb i{display:block;height:100%;width:0;background:#6fd39b;transition:width 1.4s linear}
+.snk .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.toastx{position:fixed;left:16px;bottom:16px;z-index:90;background:#26292c;color:#fff;border-radius:8px;padding:9px 14px;font-size:14px;max-width:calc(100vw - 32px)}
+
+/* ---------- One page, 672px column ---------- */
+.wrap{max-width:672px;display:flex;flex-direction:column;gap:40px;padding-block:28px 64px}
+header.top{padding-bottom:0}
+header.top h1{font-size:28px}
+.panel{padding-top:0}
+.panel~.panel{border-top:1px solid var(--line);padding-top:40px}
+.stage{padding:12px}
+.stage-title h2 .n{font-family:var(--mono);font-size:12px;font-weight:500;background:var(--surface2);border-radius:999px;padding:1px 8px;margin-left:6px;color:var(--muted);vertical-align:middle}
+/* Stories table becomes a stack of cards so nothing scrolls sideways at 672px */
+.tbl-wrap{background:none;border:0;border-radius:0;overflow:visible}
+table.dt{display:block;width:auto;min-width:0}
+table.dt thead{display:none}
+table.dt tbody{display:flex;flex-direction:column;gap:10px}
+table.dt tr{display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:6px;row-gap:8px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table.dt td,table.dt tr:last-child td{padding:0;border:0;grid-column:2;min-width:0;background:transparent}
+table.dt td.num,table.dt td.cap,table.dt td.pf,table.dt td.us,table.dt td.go{width:auto}
+table.dt td.num{grid-column:1;grid-row:1 / span 4;padding-top:2px}
+table.dt tr:last-child td.num{grid-column:1;grid-row:1 / span 4}
+table.dt td.pf{display:flex;flex-wrap:wrap;gap:2px 10px}
+table.dt td.pf span{display:inline}
+table.dt td.go{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;padding-top:8px;border-top:1px dashed var(--line)}
+table.dt td.go small{display:block;flex-basis:100%;margin:0}
+table.dt tr.flash{background:var(--warn-soft)}
+table.dt tr.flash td{background:transparent}
+
+/* ---------- Collapsible sections ---------- */
+.wrap{gap:12px}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:10px;min-width:0}
+.sec>summary,.box.sub>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;border-radius:10px}
+.sec>summary::-webkit-details-marker,.box.sub>summary::-webkit-details-marker{display:none}
+.sec>summary::before,.box.sub>summary::before{content:"";flex:none;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s}
+.sec[open]>summary::before,.box.sub[open]>summary::before{transform:rotate(45deg)}
+.sec>summary{padding:16px 18px}
+.sec>summary:hover,.box.sub>summary:hover{background:var(--surface2)}
+.sec>summary:focus-visible,.box.sub>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sec>summary h2{font-size:18px}
+.sec-body{display:flex;flex-direction:column;gap:16px;padding:18px;border-top:1px solid var(--line);min-width:0}
+.sec-desc{color:var(--muted);font-size:14px;margin:0}
+.sec-body p.intro-p{font-size:15px;line-height:1.55;margin:0}
+.sec .box{background:var(--bg)}
+.box.sub{gap:0;padding:0}
+.box.sub>summary{padding:12px 16px}
+.box.sub>summary h3{font-size:15px}
+.box.sub>:not(summary){margin-inline:16px}
+.box.sub>:last-child{margin-bottom:14px}
+.box.sub>summary+*{margin-top:4px}
+.box.sub[open]>summary{border-bottom-left-radius:0;border-bottom-right-radius:0}
+.sec .stage{background:var(--bg)}
+.sec>summary h2 .n{font-family:var(--mono);font-size:12px;font-weight:500;background:var(--surface2);border-radius:999px;padding:1px 8px;margin-left:8px;color:var(--muted);vertical-align:middle}
+.box.sub>summary~*{margin-top:8px}
+.box.sub>summary+*{margin-top:4px}
+table.dt tr{background:var(--surface)}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div class="eyebrow">Custom objects · UX prototype brief</div>
+  <h1>Custom Objects - Record List UX</h1>
+  <p>A brief for the record list view of custom objects: an intro, every capability as a story, and two interactive mockups. Open a section to read it.</p>
+</header>
+
+<details class="sec" id="p-intro">
+  <summary><h2>Intro</h2></summary>
+  <div class="sec-body">
+    <p class="intro-p">Companies often need to keep track of things that do not fit the built-in record types, such as a fleet of cars, a set of properties or a list of contracts. Custom objects let an account define its own record types, with fields and a name the company chooses. Every custom object needs a list view where people find, review and update its records. The deal list view is the most developed list today, so this brief starts from it and generalizes it. It takes the 42 deal capabilities and turns them into 37 general ones, 31 for regular users and 6 for admins, 5 of them new for custom objects. Seven deal-only capabilities, such as the pipeline filter and sequences, are left out because they depend on deal concepts. The example object throughout is Cars, with records like a Honda Civic and a Ford Focus. Admins can do everything a regular user can, plus bulk archive and delete, select beyond the loaded page, and restore deleted records. What anyone can do is always subject to their permissions on the object and to the features their company has. The Stories section lists every capability, and the two mockups let you try the general ones on the Cars list.</p>
+  </div>
+</details>
+
+<details class="sec" id="p-st">
+  <summary><h2>Stories<span class="n" id="n-st"></span></h2></summary>
+  <div class="sec-body">
+  <details class="box sub"><summary><h3>Context</h3></summary>
+    <p>The deal list view has 42 capabilities (what a user can see or do). This section lists them next to the general capabilities derived from them for custom objects. Example object: <b>Cars</b>, with Honda Civic 123 ABC and Ford Focus 456 DEF as records. Use the filters to switch between the deal view and the general view, regular users and admins, and see and do capabilities. Hover an ID anywhere to read its story. The two UI sections below show the general capabilities on the Cars list.</p>
+    <div class="legend" id="sum"></div>
+  </details>
+  <details class="box sub"><summary><h3>Decisions and open questions</h3></summary>
+    <ul class="assume">
+      <li><b>Regular vs admin.</b> Deal rows with persona Rep or Both are regular. Rows with persona Manager are admin: select all beyond the page, bulk archive, bulk delete, bulk unarchive and the archiving automation banner. Admins can also do everything a regular user can.</li>
+      <li><b>Left out as deal-only:</b> pipeline filter, sequences, convert to leads, contact enrichment, the deal-added automation banner, the participants coachmark, the new-account onboarding banner, and the totals and weighted value in the summary bar.</li>
+      <li><b>Quick filter chips</b> keep the idea but use a field of the object (here Status) instead of won, lost and open.</li>
+      <li><b>Several deal stories merge:</b> create and edit filter become one "Build a filter with conditions" story, archived list and archive view become one, and bulk progress and bulk error become one.</li>
+      <li><b>New for custom objects:</b> R15 Bulk edit, R29 Import records, R30 Hover cards, R31 Show on map, A6 Restore deleted records.</li>
+      <li><b>Column layout is saved per filter,</b> exactly as on the deal list: switching filter switches the columns, order and widths.</li>
+      <li><b>Everything is subject to</b> the user's permissions on the object (edit, archive, delete, export) and to the company having the feature (data cleanup, automations, email).</li>
+    </ul>
+    <h3 style="margin-top:6px">Open questions</h3>
+    <ul class="assume">
+      <li>Who can restore deleted records: admins only (as drawn here) or anyone with delete permission?</li>
+      <li>Show on map needs an address field on the object. Does it appear only when one exists?</li>
+      <li>Send group email and Create activities assume a link to a contact. What happens for objects with no contact link?</li>
+      <li>Is the archive cap per object or per company?</li>
+    </ul>
+  </details>
+  <details class="box sub"><summary><h3>Left out of custom objects</h3></summary><div id="left" class="legend" style="gap:10px 8px"></div></details>
+
+  <div class="filters">
+    <div class="fgroup"><span>Scope</span><div class="seg" data-k="scope" role="group" aria-label="Scope"><button type="button" aria-pressed="true" data-f="all">All</button><button type="button" aria-pressed="false" data-f="deal">Deal</button><button type="button" aria-pressed="false" data-f="general">General</button></div></div>
+    <div class="fgroup"><span>Role</span><div class="seg" data-k="role" role="group" aria-label="Role"><button type="button" aria-pressed="true" data-f="all">All</button><button type="button" aria-pressed="false" data-f="regular">Regular</button><button type="button" aria-pressed="false" data-f="admin">Admin</button></div></div>
+    <div class="fgroup"><span>Type</span><div class="seg" data-k="ty" role="group" aria-label="Type"><button type="button" aria-pressed="true" data-f="all">All</button><button type="button" aria-pressed="false" data-f="SEE">See</button><button type="button" aria-pressed="false" data-f="DO">Do</button></div></div>
+    <span class="muted" id="shown" aria-live="polite"></span>
+  </div>
+  <div class="tbl-wrap"><table class="dt" id="tbl"></table></div>
+  </div>
+</details>
+
+<details class="sec" id="p-mr">
+  <summary><h2>Mockup: Cars list, regular user</h2></summary>
+  <div class="sec-body">
+  <p class="sec-desc">Modelled on the Deals list. Everything is clickable: add conditions, switch filters, sort and drag columns, tick rows for the bulk toolbar, edit a cell by clicking it, hover an owner or a car name, open the ··· menu. Black tags like <span class="mono">R5</span> point to the matching story in the Stories section above. Admin-only controls are not shown here.</p>
+  <div class="stage" id="stgR" data-ids="on">
+    <div class="row between">
+      <div class="row"><span class="cap">Capability tags</span><div class="seg" id="segIds" role="group" aria-label="Capability tags"><button type="button" aria-pressed="true" data-v="on">On</button><button type="button" aria-pressed="false" data-v="off">Off</button></div></div>
+      <div class="row"><span class="cap">Bulk result</span><div class="seg" id="segErr" role="group" aria-label="Bulk result"><button type="button" aria-pressed="true" data-v="ok">Success</button><button type="button" aria-pressed="false" data-v="err">Error</button></div><button class="btn-s" type="button" id="simR">Simulate: colleague adds a car</button></div>
+    </div>
+    <div class="ui lst" id="lstR"></div>
+  </div>
+  </div>
+</details>
+
+<details class="sec" id="p-ma">
+  <summary><h2>Mockup: Cars list, admin</h2></summary>
+  <div class="sec-body">
+  <p class="sec-desc">The same list as an admin sees it. Everything a regular user can do is still there. The admin-only capabilities carry green tags (<span class="mono">A1</span> to <span class="mono">A6</span>): tick a row, then tick the header checkbox and choose "Select all" for records beyond the page, bulk archive and delete, switch to Archived for bulk unarchive, see the automation banner, and open Restore data in the ··· menu.</p>
+  <div class="stage" id="stgA" data-ids="on">
+    <div class="row between">
+      <div class="row"><span class="cap">Capability tags</span><div class="seg" id="segIdsA" role="group" aria-label="Capability tags"><button type="button" aria-pressed="true" data-v="on">On</button><button type="button" aria-pressed="false" data-v="off">Off</button></div></div>
+      <div class="row"><span class="cap">Bulk result</span><div class="seg" id="segErrA" role="group" aria-label="Bulk result"><button type="button" aria-pressed="true" data-v="ok">Success</button><button type="button" aria-pressed="false" data-v="err">Error</button></div><button class="btn-s" type="button" id="simA">Simulate: colleague adds a car</button></div>
+    </div>
+    <div class="ui lst" id="lstA"></div>
+  </div>
+  </div>
+</details>
+</div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+/* ---------------- Data: deal list capability map ---------------- */
+// [#, type, capability, persona, frequency, when, then, carried-to, note]
+const D=[[1,"SEE","See the full list of deals with all field columns","Both","Every visit","the page loads","user sees all deals matching the active filter rendered as rows in the grid, with each deal's key fields (title, value, owner, stage, pipeline, expected close date, etc.) visible as columns",["R1"],""],[2,"SEE","See summary statistics (total value, weighted value, deal count)","Both","Every visit","the page loads and the user has the can_see_deals_list_summary permission","user sees the total deal value (per currency), weighted value, and total deal count in the summary bar — all filter-aware and updating in real time",["R2"],"Totals and weighted value are left out. The count stays."],[3,"SEE","See real-time deal updates","Both","Daily","another user creates, updates, or deletes a deal","the list updates live via WebSocket without requiring a manual page refresh",["R3"],""],[4,"DO","Filter by owner / team","Rep","Every visit","user selects their own name, another user, or a team from the owner/team filter","the list narrows to only those deals",["R4"],""],[5,"DO","Filter by pipeline","Both","Every visit","user selects a pipeline from the pipeline dropdown","the list and summary statistics update to show only deals in that pipeline",[],"Custom objects have no pipelines."],[6,"DO","Apply a quick filter (e.g. won, lost, open)","Both","Daily","user clicks a quick filter chip (won, lost, open, or other configured options)","the list is instantly filtered to matching deals",["R5"],""],[7,"DO","Apply a saved custom filter","Both","Daily","user selects a saved filter from the filters menu","the list and summary statistics reload for that filter's criteria",["R6"],""],[8,"DO","Create a new custom filter","Both","Often","user opens the filters menu and clicks \"Add filter\"","the filter-components modal opens, the user can define conditions, save the filter (private or shared), and the list immediately reloads with it applied",["R7"],""],[9,"DO","Edit an existing custom filter","Both","Often","user opens the filters menu and edits an active filter","the filter modal opens in edit mode; on save, the list reloads with the updated criteria",["R7"],""],[10,"DO","Preview a filter before saving","Both","Often","user uses the preview action in the filter modal","a temporary filter is applied to the list so the user can see matching deals before committing to saving",["R8"],""],[11,"DO","Delete a saved custom filter","Both","Situational","user deletes a filter from the filter modal","the filter is removed, the column config for that filter is cleaned up, and the list resets to the default view",["R10"],""],[12,"DO","Save a filter as a new copy","Both","Situational","user edits a filter and clicks \"Save as new\"","a new filter is created with the modified criteria without overwriting the original",["R9"],""],[13,"DO","Sort the list by any column","Both","Daily","user clicks a column header","the list is sorted by that field (ascending or descending); stage sorting uses a multi-key sort (stage order → stage name → pipeline name)",["R11"],"Stage sorting is dropped."],[14,"DO","Inline-edit a deal field directly in the list","Rep","Daily","user clicks an editable cell in the grid","the cell enters edit mode and the user can update the field value (e.g. value, expected close date, owner, stage) without opening the deal; the change is saved on-the-fly",["R12"],""],[15,"DO","Open a deal's detail view","Rep","Daily","user clicks a deal's title row","the deal detail view opens for that deal",["R13"],""],[16,"DO","Select individual rows for bulk actions","Both","Often","user checks the checkbox on one or more deal rows","those deals are selected and the bulk actions toolbar appears",["R14"],""],[17,"DO","Select all deals (including beyond current page)","Manager","Often","user checks the \"select all\" header checkbox","all deals matching the active filter are selected (not just loaded rows), with the option to exclude individual rows; the bulk actions toolbar shows the total count",["A1"],""],[18,"DO","Bulk archive deals","Manager","Often","user has can_archive_deals permission, selects deals, and clicks Archive in the bulk toolbar","the Archive modal opens for confirmation; on confirm, all selected deals are archived and removed from the active list",["A2"],""],[19,"DO","Bulk delete deals","Manager","Often","user has can_delete_deals permission, selects deals, and clicks Delete in the bulk toolbar","the Delete modal opens with a warning; on confirm, all selected deals are deleted",["A3"],""],[20,"DO","Bulk send a group email","Rep","Often","user selects deals and clicks \"Send group email\" in the bulk toolbar","the group email composer opens, pre-addressed to the contacts of all selected deals",["R16"],""],[21,"DO","Bulk create activities for selected deals","Rep","Often","user selects deals and clicks \"Create activities\" in the bulk toolbar","the bulk activity creation flow opens, allowing a single activity to be logged against all selected deals",["R17"],""],[22,"DO","Bulk enroll deals in a sequence","Rep","Often","user selects deals and clicks \"Enroll in sequence\" in the bulk toolbar","the sequence enrollment flow opens for the selection",[],"Sequences are built for deals and contacts."],[23,"DO","Bulk convert deals to leads","Rep","Situational","user has can_convert_deals_to_leads permission, selects deals, and triggers Convert to Leads","the convert-to-leads modal opens; on confirm, all selected deals are converted and a progress snackbar tracks the bulk action",[],"Lead conversion is deal-only."],[24,"DO","Bulk enrich contact data","Rep","Situational","user selects deals and clicks \"Enrich\" in the bulk toolbar","the contact enrichment flow opens to auto-fill missing contact fields for all selected deals' linked persons/organisations",[],"Enrichment applies to people and organizations."],[25,"DO","Archive a single deal from the row menu","Both","Often","user opens the row-level settings menu for a deal and clicks \"Archive\" (and cap not reached)","the Archive modal opens; on confirm, the deal is archived and removed from the active list",["R18"],""],[26,"DO","Delete a single deal from the row menu","Both","Often","user has can_delete_deals permission and clicks \"Delete\" from the row menu","the Delete modal opens with a warning; on confirm, the deal is permanently deleted",["R19"],""],[27,"DO","Customize visible columns (show/hide)","Both","Situational","user opens the column picker","user can toggle visibility for any deal field column; the setting is persisted per filter in the UI layout settings",["R20"],""],[28,"DO","Reorder columns (drag and drop)","Both","Situational","user drags a column header to a new position","the column order updates and is persisted per-filter in the UI layout settings",["R21"],""],[29,"DO","Resize columns","Both","Situational","user drags a column border to resize it","the column width updates and is persisted",["R22"],""],[30,"DO","Filter within a column header (column-level filter)","Both","Often","user clicks the filter icon in a column header","an inline filter input appears for that column, allowing quick narrowing of the list by that field's values without opening the full filter modal",["R23"],""],[31,"DO","Switch to the archived deals view","Both","Often","user navigates to /deals/archived and the archiving feature is enabled","user sees the archived deals list in a read-only grid with its own filters, summary, unarchive, and delete actions",["R24"],""],[32,"SEE","See archived deals list (read-only)","Both","Often","user opens the archived deals view","user sees all archived deals in a read-only grid; inline editing is disabled; only Unarchive and Delete row actions are available",["R24"],""],[33,"DO","Bulk unarchive deals (from archived view)","Manager","Often","user selects deals in the archived view and clicks Unarchive in the bulk toolbar","the Unarchive modal opens; on confirm, selected deals are restored to their original pipeline and stage",["A4"],""],[34,"DO","Unarchive a single deal from the row menu (archived view)","Both","Often","user opens the row menu for an archived deal and clicks \"Unarchive\"","the Unarchive modal opens; on confirm, the deal is restored to its original pipeline and stage",["R25"],""],[35,"SEE","See automation recommendation banner (archiving)","Manager","Often","the user has can_create_own_workflow permission and the list is not empty","user sees the archiving automations banner, suggesting a workflow to auto-archive deals meeting certain criteria",["A5"],""],[36,"SEE","See automation recommendation banner (deal added)","Rep","Often","the automation proactive suggestions feature is enabled and a new deal was recently added","user sees the deal-added automation banner, recommending a follow-up automation workflow",[],"Tied to the deal-added event."],[37,"SEE","See data cleanup banner","Both","Situational","the data cleanup feature flags are active","user sees a data cleanup notification banner above the list, surfacing data quality issues for the deal entity",["R26"],""],[38,"SEE","See participants column with discovery coachmark","Both","Situational","the participants discovery coachmark is eligible","user sees a pulsating dot on the Participants column, drawing attention to the fact that deals can have multiple stakeholders",[],"Participants are a deal concept. Linked records replace them."],[39,"SEE","See the \"how your data is organized\" onboarding banner","Rep","Situational","the user is in the company creator view (new account) and there are deals in the list","user sees the onboarding banner at the bottom of the list explaining how the CRM organizes data",[],"Onboarding for new accounts is deal-specific."],[40,"SEE","See bulk operation progress via snackbar","Both","Situational","a bulk operation (e.g. convert to leads) is in progress","user sees a progress snackbar showing the bulk action status, with a notification when it completes",["R27"],""],[41,"SEE","See real-time bulk socket error message","Both","Situational","a bulk WebSocket operation encounters an error","user sees an error notification informing them the operation failed, with an option to dismiss",["R27"],""],[42,"DO","Export deals data","Both","Situational","user has can_export_data_from_lists permission and triggers export from the filters/actions menu","the export flow starts, exporting all deals matching the active filter to a downloadable file",["R28"],""]];
+
+/* ---------------- Data: generalized capabilities ---------------- */
+const GR=[
+{id:'R1',t:'See the record list',from:[1],w:'a user opens the Cars list',th:['Sees every car that matches the active filter as a row, with the columns saved for that filter, for example Name, License plate, Status, Mileage, Next service due and Owner','Sees the first rows at once and a Load more control for the rest','Sees an empty state with a reset action when nothing matches']},
+{id:'R2',t:'See the record count',from:[2],w:'the list loads or the filter changes',th:['Sees the number of records that match, for example "12 cars", next to the toolbar','Can open an info popover that explains what is counted','Sees the count change with the filter and in real time']},
+{id:'R3',t:'See live updates',from:[3],w:'another user creates, updates or deletes a car',th:['Sees the list update without a page refresh','Sees a new row highlighted for a moment']},
+{id:'R4',t:'Filter by owner or team',from:[4],w:'the user picks a person or a team in the owner filter',th:['Can pick Everyone, themselves, another user or a team','Sees the list and count narrow to cars owned by them']},
+{id:'R5',t:'Apply a quick filter',from:[6],w:'the user clicks a quick filter chip, for example a Status value',th:['Sees the list filtered at once and the chip highlighted','Can click All to clear it']},
+{id:'R6',t:'Apply a saved filter',from:[7],w:'the user picks a saved filter in the Filters menu',th:['Sees the list and count reload for that filter','Sees the filter name in the toolbar, with the columns saved for that filter','Can switch back to All cars']},
+{id:'R7',t:'Build a filter with conditions',from:[8,9],w:'the user clicks + Add condition',th:['Sees suggested fields first, then All fields with search','Can pick a field and a value; each condition shows as a chip that can be removed','Sees the list update after each condition','Can change the conditions of a saved filter the same way']},
+{id:'R8',t:'Preview a filter before saving',from:[10],w:'the user has added conditions and has not saved them',th:['Sees the list filtered, with a "Preview, not saved" label','Can save it as private or shared, or reset it']},
+{id:'R9',t:'Save a filter as a new copy',from:[12],w:'the user edits a saved filter',th:['Can choose Save changes to update it, or Save as new to keep the original','Sees the new filter in the Filters menu after saving as new']},
+{id:'R10',t:'Delete a saved filter',from:[11],w:'the user picks Delete filter in the Filters menu',th:['Sees a confirmation','Sees the list reset to All cars and the filter\'s column layout removed']},
+{id:'R11',t:'Sort by a column',from:[13],w:'the user clicks a column header or picks Sort in its menu',th:['Sees the list sorted ascending, then descending on the next click','Sees an arrow on the sorted column']},
+{id:'R12',t:'Edit a cell inline',from:[14],w:'the user has edit permission and clicks an editable cell',th:['Can change the value in place; Enter saves, Esc cancels, and a toast confirms it','Sees no inline edit on read-only fields or in the archived view']},
+{id:'R13',t:'Open a record',from:[15],w:'the user clicks a record\'s name',th:['Sees the record detail page open']},
+{id:'R14',t:'Select records',from:[16],w:'the user ticks one or more rows',th:['Sees the bulk toolbar with the number selected','Can tick the header checkbox to select every row loaded on the page','Can clear the selection']},
+{id:'R15',t:'Edit several records at once',from:[],ty:'DO',w:'the user selects records and clicks Bulk edit (new)',th:['Can pick a field and a new value','Sees how many records will change before confirming','Sees a progress notice, then the updated rows']},
+{id:'R16',t:'Send a group email',from:[20],w:'the user selects records and clicks Send email',th:['Sees the composer open, addressed to the contacts linked to the selected cars','Sees records with no linked contact called out']},
+{id:'R17',t:'Create activities for several records',from:[21],w:'the user selects records and clicks Create activities',th:['Can set type, subject, due date and assignee once','Gets one activity per selected record']},
+{id:'R18',t:'Archive a record from the row menu',from:[25],w:'the user opens a row\'s ··· menu and clicks Archive',th:['Sees a confirmation that the record becomes read-only','Sees the row leave the active list']},
+{id:'R19',t:'Delete a record from the row menu',from:[26],w:'the user has delete permission and clicks Delete in the row menu',th:['Sees a confirmation that names what is deleted','Sees the row removed; it can be restored within 30 days']},
+{id:'R20',t:'Show, hide and add columns',from:[27],w:'the user clicks Customize columns, or Insert column in a header menu',th:['Can switch any field on or off as a column and search the field list','Can insert a column to the left or right of an existing one','Sees the layout saved for the current filter']},
+{id:'R21',t:'Reorder columns',from:[28],w:'the user drags a column header',th:['Sees the column move; the order is saved for the current filter']},
+{id:'R22',t:'Resize columns',from:[29],w:'the user drags a column border',th:['Sees the width change; it is saved for the current filter']},
+{id:'R23',t:'Filter within a column header',from:[30],w:'the user picks Filter in a column\'s menu',th:['Sees a filter box under that header','Sees the list narrow as they type, without opening the full filter']},
+{id:'R24',t:'Switch to the archived view',from:[31,32],w:'the user switches from Active to Archived',th:['Sees archived records in a read-only list with the same filters','Sees no inline edit; the row actions are Unarchive and Delete']},
+{id:'R25',t:'Unarchive a record from the row menu',from:[34],w:'the user clicks Unarchive in a row menu in the archived view',th:['Sees a confirmation','Sees the record return to the active list']},
+{id:'R26',t:'See the data cleanup banner',from:[37],w:'data cleanup is on and the list has data quality issues',th:['Sees a banner above the list that counts the issues','Can click Review to preview a filter of the affected records']},
+{id:'R27',t:'See bulk progress and errors',from:[40,41],w:'a bulk action is running',th:['Sees a progress notice with the action and number of records','Sees a completion notice, or an error notice that can be dismissed']},
+{id:'R28',t:'Export records',from:[42],w:'the user has export permission and picks Export in the ··· menu',th:['Can export every record that matches the active filter, not only the loaded rows','Sees a notice when the export starts']},
+{id:'R29',t:'Import records',from:[],ty:'DO',w:'the user opens Import data (new)',th:['Can choose a spreadsheet, Google Sheets or another CRM as the source','Can map file columns to the object\'s fields before importing','Sees the imported records in the list']},
+{id:'R30',t:'Preview an owner or record on hover',from:[],ty:'SEE',w:'the user hovers an owner or a record name (new)',th:['Sees a card with the key facts without leaving the list']},
+{id:'R31',t:'Show records on a map',from:[],ty:'DO',w:'the object has an address field and the user picks Show on map (new)',th:['Sees the records that match the filter as pins grouped by place','Can click a pin to see its records']}
+];
+const GA=[
+{id:'A1',t:'Select all records, beyond the page',from:[17],w:'an admin ticks the header checkbox',th:['Sees a prompt to select all N records that match the filter, not only the loaded rows','Can untick single rows to exclude them','Sees the toolbar show the total count']},
+{id:'A2',t:'Bulk archive records',from:[18],w:'an admin with archive permission selects records and clicks Archive',th:['Sees a confirmation with the count','Sees a progress notice, then the records leave the active list']},
+{id:'A3',t:'Bulk delete records',from:[19],w:'an admin with delete permission selects records and clicks Delete',th:['Sees a warning that the records and their notes, files and documents are deleted','Sees a progress notice, then the records removed; they can be restored within 30 days']},
+{id:'A4',t:'Bulk unarchive records',from:[33],w:'an admin selects records in the archived view and clicks Unarchive',th:['Sees a confirmation','Sees the records return to the active list']},
+{id:'A5',t:'See the archiving automation banner',from:[35],w:'an admin can create workflows and the list is not empty',th:['Sees a banner that suggests an automation to archive records that meet a condition','Can open the automation builder or dismiss the banner']},
+{id:'A6',t:'Restore deleted records',from:[],ty:'DO',w:'an admin picks Restore data in the ··· menu (new)',th:['Sees records deleted in the last 30 days, with who deleted them and when','Can restore one; it returns to the active list']}
+];
+
+/* ---------------- Helpers ---------------- */
+function flash(el){el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1800)}
+
+/* ---------------- Unified stories table ---------------- */
+const cap1=t=>t.charAt(0).toUpperCase()+t.slice(1);
+const ROWS=[];
+D.forEach(r=>{const [n,ty,cap,pers,fr,w,th,map,note]=r;ROWS.push({id:'D'+n,scope:'deal',role:pers==='Manager'?'admin':'regular',ty,cap,pers,fr,w,th,links:map,note})});
+const tyOf=g=>g.ty||D.find(r=>r[0]===g.from[0])[1];
+GR.forEach(g=>ROWS.push({id:g.id,scope:'general',role:'regular',ty:tyOf(g),cap:g.t,w:g.w,th:g.th,links:g.from.map(n=>'D'+n),isNew:!g.from.length}));
+GA.forEach(g=>ROWS.push({id:g.id,scope:'general',role:'admin',ty:tyOf(g),cap:g.t,w:g.w,th:g.th,links:g.from.map(n=>'D'+n),isNew:!g.from.length}));
+const TRIVIAL=/^(the page loads|a user opens the cars list)$/i;
+function storyHtml(r){
+  const then=Array.isArray(r.th)?'<ul>'+r.th.map(x=>`<li>${x}</li>`).join('')+'</ul>':`<p>${cap1(r.th)}</p>`;
+  return TRIVIAL.test(r.w)?then:`<p><span class="k">When</span>${cap1(r.w)}</p>${then}`;
+}
+const ROWBY={};ROWS.forEach(r=>ROWBY[r.id]=r);
+const tbl=$('#tbl');
+tbl.innerHTML='<thead><tr><th>ID</th><th>Capability</th><th>Role</th><th>User story</th><th>Related</th></tr></thead><tbody>'+ROWS.map(r=>{
+  const rel=r.scope==='deal'
+    ?(r.links.length?r.links.map(m=>`<a class="chip" href="#" data-row="${m}">${m}</a>`).join(' ')+(r.note?`<small>${r.note}</small>`:''):`<span class="tag bad">Left out</span><small>${r.note||''}</small>`)
+    :(r.links.length?'<small style="margin:0 0 4px">From deal</small>'+r.links.map(m=>`<a class="chip d" href="#" data-row="${m}">${m}</a>`).join(' '):'<span class="tag warn">New</span><small>Added for custom objects</small>');
+  const role=r.role==='admin'?'Admin':'Regular';
+  return `<tr id="r-${r.id}" data-scope="${r.scope}" data-role="${r.role}" data-ty="${r.ty}"><td class="num">${r.id}</td><td class="cap"><b>${r.cap}</b><span class="tag ${r.ty==='SEE'?'see':'do'}">${r.ty}</span> <span class="tag plain">${r.scope==='deal'?'Deal':'General'}</span></td><td class="pf"><span>${role}</span>${r.pers?`<span>${r.pers} · ${r.fr}</span>`:''}</td><td class="us">${storyHtml(r)}</td><td class="go">${rel}</td></tr>`}).join('')+'</tbody>';
+$('#n-st').textContent=ROWS.length;
+const F={scope:'general',role:'all',ty:'all'};
+function applyF(){let n=0;$$('tbody tr',tbl).forEach(tr=>{const ok=(F.scope==='all'||tr.dataset.scope===F.scope)&&(F.role==='all'||tr.dataset.role===F.role)&&(F.ty==='all'||tr.dataset.ty===F.ty);tr.hidden=!ok;if(ok)n++});$('#shown').textContent=`Showing ${n} of ${ROWS.length}`;
+  $$('.seg[data-k]').forEach(sg=>$$('button',sg).forEach(b=>b.setAttribute('aria-pressed',b.dataset.f===F[sg.dataset.k]?'true':'false')))}
+$$('.seg[data-k]').forEach(sg=>sg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;F[sg.dataset.k]=b.dataset.f;applyF()}));
+applyF();
+const leftRows=D.filter(r=>!r[7].length);
+$('#left').innerHTML=leftRows.map(r=>`<a class="chip d" href="#" data-row="D${r[0]}" title="${esc(r[8]||'')}">D${r[0]} ${esc(r[2])}</a>`).join('');
+const nReg=D.filter(r=>r[3]!=='Manager').length, nAdm=D.length-nReg, nNew=GR.concat(GA).filter(g=>!g.from.length).length;
+$('#sum').innerHTML=`<b>${D.length}</b> deal capabilities (${nReg} regular, ${nAdm} admin) → <b>${GR.length+GA.length}</b> general ones (${GR.length} regular, ${GA.length} admin). ${leftRows.length} deal capabilities left out, ${nNew} new.`;
+document.addEventListener('click',e=>{const a=e.target.closest('a[data-row]');if(!a)return;e.preventDefault();$('#p-st').open=true;F.scope=F.role=F.ty='all';applyF();const el=document.getElementById('r-'+a.dataset.row);if(el){el.scrollIntoView({block:'center'});flash(el)}});
+
+/* ---------------- Hover card on story IDs ---------------- */
+(function(){
+  const card=document.createElement('div');card.className='hcard';card.hidden=true;card.setAttribute('role','tooltip');document.body.appendChild(card);
+  const idOf=el=>{const t=(el.dataset.row||(el.matches('.ref,td.num')?el.textContent.trim():''));return ROWBY[t]?t:''};
+  function body(r){return `<div class="hh"><b>${r.id}</b><span>${r.cap}</span></div><div><span class="tag ${r.ty==='SEE'?'see':'do'}">${r.ty}</span> <span class="tag plain">${r.role==='admin'?'Admin':'Regular'}</span></div>${storyHtml(r)}`}
+  function show(el){
+    const id=idOf(el);if(!id)return;
+    card.innerHTML=body(ROWBY[id]);card.hidden=false;
+    const r=el.getBoundingClientRect(),c=card.getBoundingClientRect();
+    let x=Math.min(Math.max(8,r.left),innerWidth-c.width-8),y=r.bottom+8;
+    if(y+c.height>innerHeight-8)y=Math.max(8,r.top-c.height-8);
+    card.style.left=x+'px';card.style.top=y+'px';
+  }
+  const hide=()=>card.hidden=true;
+  document.addEventListener('mouseover',e=>{const el=e.target.closest('a[data-row],.ref,td.num');if(el)show(el);else hide()});
+  document.addEventListener('focusin',e=>{const el=e.target.closest('a[data-row]');if(el)show(el)});
+  document.addEventListener('focusout',hide);
+  document.addEventListener('scroll',hide,true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hide()});
+})();
+
+/* ---------------- Cars list mockup ---------------- */
+const COLS=[
+ {k:'name',l:'Name',w:230,ref:'R13'},
+ {k:'plate',l:'License plate',w:130,ref:'R22'},
+ {k:'status',l:'Status',w:130,ed:1,ref:'R12'},
+ {k:'mileage',l:'Mileage',w:120,ed:1,ref:'R11'},
+ {k:'next',l:'Next service due',w:170,ed:1,ref:'R21'},
+ {k:'owner',l:'Owner',w:190,ed:1,ref:'R30'},
+ {k:'make',l:'Make',w:120},{k:'year',l:'Year',w:90},{k:'vin',l:'VIN',w:190},{k:'added',l:'Added',w:130}];
+const DEFVIS=['name','plate','status','mileage','next','owner'];
+const STATUSES=['Available','In service','Reserved'];
+const SPILL={'Available':'green','In service':'amber','Reserved':'blue'};
+const OWN={'James Miller':['JM','','james.miller@fleetco.com','Fleet manager'],'Emily Johnson':['EJ','c2','emily.johnson@fleetco.com','Service coordinator'],'Michael Davis':['MD','c3','michael.davis@fleetco.com','Sales rep']};
+const CITY={Chicago:[60,28],Atlanta:[72,70],Denver:[34,45],Boston:[90,22]};
+const mk=(id,name,plate,make,status,mileage,next,owner,year,vin,added,city,contact,arch)=>({id,name,plate,make,status,mileage,next,owner,year,vin,added,city,contact,arch:!!arch});
+const CARS=[
+ mk(1,'Honda Civic 123 ABC','123 ABC','Honda','Available',91450,'Nov 14, 2026','James Miller',2021,'2HGFC2F59MH123456','Mar 14, 2026','Chicago','Sarah Thompson'),
+ mk(2,'Ford Focus 456 DEF','456 DEF','Ford','In service',128300,'Oct 20, 2026','Emily Johnson',2018,'1FADP3F20JL456789','Mar 14, 2026','Atlanta','Robert Wilson'),
+ mk(3,'Toyota Corolla 789 GHI','789 GHI','Toyota','Available',54200,'Dec 2, 2026','James Miller',2022,'JTDEPRAE0LJ789012','Apr 2, 2026','Denver','Jennifer Brown'),
+ mk(4,'Chevrolet Malibu 321 JKL','321 JKL','Chevrolet','Reserved',76900,'Jan 15, 2027','Michael Davis',2020,'1G1ZD5ST0LF321098','Apr 9, 2026','Chicago','David Anderson'),
+ mk(5,'Subaru Outback 654 MNO','654 MNO','Subaru','Available',102800,'','Emily Johnson',2019,'4S4BSANC5K3654321','May 6, 2026','Boston','Sarah Thompson'),
+ mk(6,'Nissan Altima 987 PQR','987 PQR','Nissan','In service',143000,'Oct 16, 2026','Michael Davis',2017,'1N4AL3AP7HC987654','May 21, 2026','Atlanta',''),
+ mk(7,'Tesla Model 3 135 STU','135 STU','Tesla','Available',33100,'Feb 1, 2027','James Miller',2023,'5YJ3E1EA7NF135790','Jun 3, 2026','Chicago','Robert Wilson'),
+ mk(8,'Jeep Wrangler 246 VWX','246 VWX','Jeep','Reserved',88450,'Nov 30, 2026','Emily Johnson',2020,'1C4HJXDG2LW246802','Jun 17, 2026','Denver','Jennifer Brown'),
+ mk(9,'Hyundai Elantra 864 YZA','864 YZA','Hyundai','Available',61900,'Mar 3, 2027','Michael Davis',2021,'5NPD84LF8MH864209','Jul 8, 2026','Chicago','David Anderson'),
+ mk(10,'Ford F-150 579 BCD','579 BCD','Ford','In service',119700,'Oct 25, 2026','James Miller',2016,'1FTEW1EP9GF579135','Jul 22, 2026','Atlanta','Sarah Thompson'),
+ mk(11,'Kia Sportage 468 EFG','468 EFG','Kia','Available',47300,'Dec 18, 2026','Emily Johnson',2022,'KNDPM3AC8N7468024','Aug 5, 2026','Boston',''),
+ mk(12,'Mazda CX-5 357 HIJ','357 HIJ','Mazda','Reserved',95050,'Jan 9, 2027','Michael Davis',2019,'JM3KFBCM5K0357913','Aug 19, 2026','Chicago','Robert Wilson'),
+ mk(13,'Dodge Charger 111 KLM','111 KLM','Dodge','Available',158200,'Aug 3, 2026','James Miller',2015,'2C3CDXBG8FH111222','Jan 20, 2026','Atlanta','David Anderson',1),
+ mk(14,'Chrysler 200 222 NOP','222 NOP','Chrysler','Available',171900,'Jul 12, 2026','Emily Johnson',2013,'1C3CCBBB9DN222333','Jan 20, 2026','Denver','',1),
+ mk(15,'Buick Encore 333 QRS','333 QRS','Buick','Available',149300,'Sep 1, 2026','Michael Davis',2014,'KL4CJASB5EB333444','Feb 11, 2026','Chicago','Sarah Thompson',1)];
+const DELETED=[{...mk(90,'Chevrolet Cruze 444 TUV','444 TUV','Chevrolet','Available',162000,'','Michael Davis',2012,'1G1PC5SH5C7444555','Jan 20, 2026','Chicago','Robert Wilson'),by:'Michael Davis',on:'Oct 2, 2026'},{...mk(91,'Nissan Sentra 555 WXY','555 WXY','Nissan','In service',98000,'Oct 30, 2026','Emily Johnson',2018,'3N1AB7AP9JY555666','Feb 3, 2026','Atlanta','David Anderson'),by:'James Miller',on:'Sep 20, 2026'}];
+const PAGE=8;
+const NOWD='Oct 13, 2026';
+const ref=id=>`<span class="ref${id[0]==='A'?' a':''}">${id}</span>`;
+const dnum=s=>{const t=Date.parse(s);return isNaN(t)?-1:t};
+const disp=(r,k)=>k==='mileage'?r.mileage.toLocaleString('en-US')+' mi':String(r[k]??'');
+
+function buildList(root,admin,errGet){
+  const S={rows:CARS.map(c=>({...c})),del:DELETED.map(c=>({...c})),arch:false,owner:'all',quick:'all',conds:[],sid:null,dirty:false,
+    saved:[{id:'s1',name:'Available cars',vis:'Shared',conds:[{k:'status',op:'is',val:'Available'}]},{id:'s2',name:'James\'s cars',vis:'Private',conds:[{k:'owner',op:'is',val:'James Miller'}]}],
+    lay:{},sort:null,cf:{},cfo:new Set(),sel:new Set(),all:false,excl:new Set(),page:1,dis:{clean:false,auto:false},fresh:null};
+  let nid=100,sidn=3,pop=null,dragK=null;
+  const $r=s=>$(s,root);
+  const key=()=>S.sid||'all';
+  const L=()=>S.lay[key()]||(S.lay[key()]={order:COLS.map(c=>c.k),vis:[...DEFVIS],w:{}});
+  const colOf=k=>COLS.find(c=>c.k===k);
+  const initials=n=>OWN[n]?OWN[n]:[n.split(' ').map(x=>x[0]).join(''),'c2','',''];
+
+  root.innerHTML=`
+  <div class="lh">
+    <div class="oi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a64d7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14l2-5a2 2 0 0 1 2-1.4h10A2 2 0 0 1 19 9l2 5v4h-2.5M3 14v4h2.5M3 14h18"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/></svg></div>
+    <h2>Cars</h2>${ref('R1')}
+    <span class="live"><i></i>Live</span>${ref('R3')}
+    <div class="sp"></div>
+    <div class="seg2" id="vw" role="group" aria-label="View"><button type="button" aria-pressed="true" data-act="vw" data-v="act">Active</button><button type="button" aria-pressed="false" data-act="vw" data-v="arc">Archived</button></div>${ref('R24')}
+    <button class="btn" type="button" data-pop="imp">Import data ▾</button>${ref('R29')}
+    <button class="btn primary" type="button" data-act="add" id="addb">+ Car</button>
+    <button class="ico" type="button" data-pop="more" aria-label="More actions">···</button>
+  </div>
+  <div id="bann"></div>
+  <div class="lb" id="bar"></div>
+  <div id="bulk"></div>
+  <div class="gw" id="grid"></div>
+  <div class="lf" id="foot"></div>
+  <div class="menu" id="fl" hidden></div>
+  <div class="hcu" id="hc" hidden></div>
+  <div class="ovl" id="ov" hidden><div class="dlg" id="dg" role="dialog" aria-modal="true"></div></div>
+  <div class="snk" id="snk" hidden></div>
+  <div class="toastx" hidden></div>`;
+
+  /* ---- data helpers ---- */
+  function cm(r,c){const v=String(r[c.k]??'').toLowerCase();if(c.op==='empty')return !v;if(c.op==='is')return v===c.val.toLowerCase();return v.includes(c.val.toLowerCase())}
+  function match(r){
+    if(r.arch!==S.arch)return false;
+    if(S.owner==='team'){if(!['James Miller','Emily Johnson'].includes(r.owner))return false}else if(S.owner!=='all'&&r.owner!==S.owner)return false;
+    if(S.quick!=='all'&&r.status!==S.quick)return false;
+    for(const c of S.conds)if(!cm(r,c))return false;
+    for(const k in S.cf)if(S.cf[k]&&!disp(r,k).toLowerCase().includes(S.cf[k].toLowerCase()))return false;
+    return true}
+  function view(){
+    const l=S.rows.filter(match);
+    if(S.sort){const {k,d}=S.sort;const g=r=>k==='mileage'||k==='year'?+r[k]:(k==='next'||k==='added')?dnum(r[k]):String(r[k]).toLowerCase();
+      l.sort((a,b)=>{const x=g(a),y=g(b);return (x<y?-1:x>y?1:0)*d})}
+    return l}
+  const shownRows=()=>view().slice(0,PAGE*S.page);
+  const isSel=id=>S.all?!S.excl.has(id):S.sel.has(id);
+  const selIds=()=>S.all?view().filter(r=>!S.excl.has(r.id)).map(r=>r.id):[...S.sel];
+  const clearSel=()=>{S.sel.clear();S.all=false;S.excl.clear()};
+  const reset=()=>{clearSel();S.page=1;refresh()};
+  const plural=n=>n+' car'+(n===1?'':'s');
+  const byId=id=>S.rows.find(r=>r.id===+id);
+  const toastEl=()=>$r('.toastx');
+  function toast(m){const t=toastEl();t.textContent=m;t.hidden=false;clearTimeout(t._h);t._h=setTimeout(()=>t.hidden=true,2800)}
+
+  /* ---- render: banners ---- */
+  function renderBann(){
+    let h='';
+    if(S.arch)h+=`<div class="banner grey"><span class="t">Archived cars are read-only. You can unarchive or delete them.</span></div>`;
+    else{
+      const n=S.rows.filter(r=>!r.arch&&!r.next).length;
+      if(n&&!S.dis.clean)h+=`<div class="banner warn"><span class="t"><b>${plural(n)}</b> ${n===1?'has':'have'} data quality issues: Next service due is missing. ${ref('R26')}</span><button class="btn sm" type="button" data-act="review">Review</button><button class="ico" type="button" data-act="dis" data-v="clean" aria-label="Dismiss">×</button></div>`;
+      if(admin&&S.rows.some(r=>!r.arch)&&!S.dis.auto)h+=`<div class="banner auto"><span class="t"><b>Archive old cars automatically.</b> Create an automation that archives cars once they meet a condition, for example Next service due is more than a year ago. ${ref('A5')}</span><button class="btn sm" type="button" data-act="auto">Create automation</button><button class="ico" type="button" data-act="dis" data-v="auto" aria-label="Dismiss">×</button></div>`}
+    $r('#bann').innerHTML=h}
+
+  /* ---- render: toolbar ---- */
+  const condLabel=c=>{const col=colOf(c.k);return `${col.l} ${c.op==='empty'?'is empty':c.op==='is'?'is '+esc(c.val):'contains '+esc(c.val)}`};
+  function renderBar(){
+    const flt=S.sid?S.saved.find(f=>f.id===S.sid):null;
+    const fl=flt?flt.name+(S.dirty?' (edited)':''):(S.conds.length?'Unsaved filter':'All cars');
+    const ol=S.owner==='all'?'Everyone':S.owner==='team'?'Service desk':S.owner.split(' ')[0];
+    const n=view().length;
+    let dirty='';
+    if(!S.sid&&S.conds.length)dirty=`<span class="pv">Preview, not saved</span>${ref('R8')}<button class="btn sm" type="button" data-act="save">Save filter</button><button class="btn sm" type="button" data-act="rst">Reset</button>`;
+    if(S.sid&&S.dirty)dirty=`<span class="pv">Edited</span><button class="btn sm" type="button" data-act="savech">Save changes</button><button class="btn sm" type="button" data-act="savenew">Save as new</button>${ref('R9')}<button class="btn sm" type="button" data-act="rst">Reset</button>`;
+    $r('#bar').innerHTML=`
+    <div class="lbr">
+      <button class="btn sm" type="button" data-pop="owner">Owner: <b>${esc(ol)}</b> ▾</button>${ref('R4')}
+      <button class="btn sm ${S.sid?'on':''}" type="button" data-pop="filters">${esc(fl)} ▾</button>${ref('R6')}
+      <span class="k">Status</span>
+      <div class="qf">${['all',...STATUSES].map(v=>`<button type="button" data-act="quick" data-v="${v}" aria-pressed="${S.quick===v}">${v==='all'?'All':v}</button>`).join('')}</div>${ref('R5')}
+      <div class="sp"></div>
+      <b>${plural(n)}</b><button class="ico" type="button" data-pop="count" aria-label="About this count" style="min-width:24px;height:24px">i</button>${ref('R2')}
+      <button class="btn sm" type="button" data-pop="cols">Customize columns</button>${ref('R20')}
+    </div>
+    <div class="lbr">
+      ${S.conds.map((c,i)=>`<span class="cchip">${condLabel(c)}<button type="button" data-act="rmcond" data-v="${i}" aria-label="Remove condition">×</button></span>`).join('')}
+      <button class="btn sm" type="button" data-pop="cond">+ Add condition</button>${ref('R7')}
+      ${dirty}
+    </div>`}
+
+  /* ---- render: bulk bar ---- */
+  function renderBulk(){
+    const n=selIds().length,el=$r('#bulk');
+    if(!n){el.innerHTML='';return}
+    const all=view(),shown=shownRows();
+    let note='';
+    if(admin){
+      if(S.all)note=`<div class="bulkn">${ref('A1')}All ${all.length} cars that match this filter are selected${S.excl.size?` (${S.excl.size} excluded)`:''}. <button type="button" data-act="selclr">Clear selection</button></div>`;
+      else if(shown.length&&shown.every(r=>S.sel.has(r.id))&&all.length>shown.length)note=`<div class="bulkn">${ref('A1')}All ${shown.length} cars on this page are selected. <button type="button" data-act="selall">Select all ${all.length} cars that match this filter</button></div>`}
+    const act=S.arch
+      ?(admin?`<button class="btn sm" type="button" data-act="bunarc">Unarchive</button>${ref('A4')}<button class="btn sm" type="button" data-act="bdel">Delete</button>${ref('A3')}`:'')
+      :`<button class="btn sm" type="button" data-act="bedit">Bulk edit</button>${ref('R15')}<button class="btn sm" type="button" data-act="bmail">Send email</button>${ref('R16')}<button class="btn sm" type="button" data-act="bact">Create activities</button>${ref('R17')}${admin?`<button class="btn sm" type="button" data-act="barc">Archive</button>${ref('A2')}<button class="btn sm" type="button" data-act="bdel">Delete</button>${ref('A3')}`:''}`;
+    el.innerHTML=`<div class="bulk"><b>${n} selected</b>${ref('R14')}${act}<div class="sp"></div><button class="btn sm" type="button" data-act="selclr">Clear</button></div>${note}`}
+
+  /* ---- render: grid ---- */
+  function cell(r,c){
+    const v=r[c.k];
+    if(c.k==='name')return `<a href="#" data-act="open" data-id="${r.id}" data-hc="rec:${r.id}">${esc(v)}</a>`;
+    if(c.k==='status')return `<span class="pill ${SPILL[v]||''}">${esc(v)}</span>`;
+    if(c.k==='owner'){const o=initials(v);return `<span class="own" data-hc="own:${esc(v)}"><span class="av sm ${o[1]}">${o[0]}</span>${esc(v)}</span>`}
+    if(c.k==='next')return v?esc(v):`<span class="caution" title="Next service due is missing">⚠ Missing</span>`;
+    return esc(disp(r,c.k))}
+  function renderGrid(){
+    const lay=L(),cols=lay.order.filter(k=>lay.vis.includes(k)).map(colOf);
+    const all=view(),shown=all.slice(0,PAGE*S.page);
+    const canSel=admin||!S.arch;
+    const w=c=>lay.w[c.k]||c.w;
+    const tw=(canSel?44:0)+cols.reduce((a,c)=>a+w(c),0)+50;
+    let h=`<table class="g" style="width:${Math.max(tw,100)}px"><thead><tr>${canSel?`<th class="cb"><input type="checkbox" data-selhead aria-label="Select all rows on the page" ${shown.length&&shown.every(r=>isSel(r.id))?'checked':''}></th>`:''}`;
+    h+=cols.map(c=>`<th data-col="${c.k}" draggable="true" style="width:${w(c)}px"><div class="hl"><span class="lab" data-act="sort" data-k="${c.k}">${c.l}</span>${S.sort&&S.sort.k===c.k?`<span class="srt">${S.sort.d>0?'▲':'▼'}</span>`:''}${S.cf[c.k]?'<span class="srt" title="Filtered">⏷</span>':''}${c.ref?ref(c.ref):''}<button class="hm" type="button" data-pop="hdr" data-key="${c.k}" aria-label="${c.l} column menu">▾</button></div><span class="rz" data-rz="${c.k}"></span></th>`).join('');
+    h+=`<th class="rm"></th></tr>`;
+    if(S.cfo.size)h+=`<tr class="fr">${canSel?'<th class="cb"></th>':''}${cols.map(c=>`<th>${S.cfo.has(c.k)?`<input type="text" data-cf="${c.k}" value="${esc(S.cf[c.k]||'')}" placeholder="Filter ${c.l.toLowerCase()}" aria-label="Filter ${c.l}">`:''}</th>`).join('')}<th class="rm"></th></tr>`;
+    h+='</thead><tbody>';
+    h+=shown.map(r=>`<tr data-id="${r.id}" class="${isSel(r.id)?'sel':''}${S.fresh===r.id?' new':''}">${canSel?`<td class="cb"><input type="checkbox" data-sel="${r.id}" aria-label="Select ${esc(r.name)}" ${isSel(r.id)?'checked':''}></td>`:''}${cols.map(c=>`<td data-k="${c.k}"${c.ed&&!S.arch?' data-ed="1"':''}>${cell(r,c)}</td>`).join('')}<td class="rm"><button class="ico" type="button" data-pop="row" data-key="${r.id}" aria-label="Row actions for ${esc(r.name)}">···</button></td></tr>`).join('');
+    h+='</tbody></table>';
+    if(!shown.length)h+=`<div class="empty"><b>No cars match this filter</b><span>Try removing a condition or changing the owner.</span><button class="btn sm" type="button" data-act="clear">Reset filters</button></div>`;
+    $r('#grid').innerHTML=h;
+    const hv=$r('[data-selhead]');if(hv)hv.indeterminate=!hv.checked&&shown.some(r=>isSel(r.id))}
+  function renderFoot(){
+    const all=view().length,sh=Math.min(all,PAGE*S.page);
+    $r('#foot').innerHTML=all?`<span>Showing ${sh} of ${all}</span>${sh<all?`<button class="btn sm" type="button" data-act="more">Load more</button>`:''}`:''}
+  function refresh(){renderBann();renderBar();renderBulk();renderGrid();renderFoot()}
+
+  /* ---- popovers ---- */
+  const optVals=k=>k==='status'?STATUSES:k==='owner'?Object.keys(OWN):[...new Set(S.rows.map(r=>r.make))].sort();
+  const mi=(act,attrs,label,extra,cls)=>`<button type="button" class="${cls||''}" data-act="${act}" ${attrs||''}><span>${label}</span>${extra||''}</button>`;
+  const POPS={
+    owner:()=>[['all','Everyone'],['James Miller','Me (James Miller)'],['Emily Johnson','Emily Johnson'],['Michael Davis','Michael Davis']].map(([v,l])=>mi('own',`data-v="${v}"`,`<span class="lbl"><span class="chk">${S.owner===v?'✓':''}</span>${l}</span>`)).join('')+`<div class="sep"></div><div class="gh">Teams</div>`+mi('own','data-v="team"',`<span class="lbl"><span class="chk">${S.owner==='team'?'✓':''}</span>Service desk</span>`,'<small>2 people</small>'),
+    filters:()=>mi('filt','data-v=""',`<span class="lbl"><span class="chk">${!S.sid?'✓':''}</span>All cars</span>`)+S.saved.map(f=>mi('filt',`data-v="${f.id}"`,`<span class="lbl"><span class="chk">${S.sid===f.id?'✓':''}</span>${esc(f.name)}</span>`,`<small>${f.vis}</small>`)).join('')+'<div class="sep"></div>'+mi('addflt','','+ Add filter')+(S.sid?mi('delflt','',`Delete filter`,ref('R10'),'dng'):''),
+    count:()=>`<div class="pad">Counts the cars that match the owner, filter and conditions. Archived cars are counted in the Archived view. Updates live.</div>`,
+    cond:d=>{
+      if(d.k){const col=colOf(d.k);
+        if(['status','owner','make'].includes(d.k))return `<div class="gh">${col.l} is</div>`+optVals(d.k).map(v=>mi('condv',`data-k="${d.k}" data-v="${esc(v)}"`,esc(v))).join('');
+        return `<div class="gh">${col.l} contains</div><div class="sr"><input type="text" data-f="cv" placeholder="Type a value" aria-label="Value"></div><div style="display:flex;gap:8px;padding:2px 10px 6px"><button class="btn sm primary" type="button" data-act="condt" data-k="${d.k}" style="width:auto">Apply</button><button class="btn sm" type="button" data-act="conde" data-k="${d.k}" style="width:auto">Is empty</button></div>`}
+      const sug=['status','make','next','owner'];
+      return `<div class="sr"><input type="text" data-f="srch" placeholder="Search fields" aria-label="Search fields"></div><div class="gh" data-g="1">Suggested</div>`+sug.map(k=>mi('condk',`data-k="${k}" data-n="${colOf(k).l}"`,colOf(k).l)).join('')+`<div class="gh" data-g="1">All fields</div>`+COLS.map(c=>mi('condk',`data-k="${c.k}" data-n="${c.l}"`,c.l)).join('')},
+    cols:()=>{const lay=L();return `<div class="sr"><input type="text" data-f="srch" placeholder="Search fields" aria-label="Search fields"></div><div class="pad" style="padding-top:0">Saved for <b>${esc(S.sid?S.saved.find(f=>f.id===S.sid).name:'All cars')}</b></div>`+lay.order.map(k=>{const c=colOf(k);return mi('tgcol',`data-k="${k}" data-n="${c.l}" ${k==='name'?'disabled':''}`,`<span class="lbl"><span class="chk">${lay.vis.includes(k)?'✓':''}</span>${c.l}</span>`)}).join('')},
+    more:()=>mi('exp','','Export data',ref('R28'))+mi('map','','Show on map',ref('R31'))+mi('clean','','Data cleanup',ref('R26'))+(admin?'<div class="sep"></div>'+mi('rest','','Restore data',ref('A6')):''),
+    imp:()=>mi('impd','data-v="a spreadsheet (.csv, .xlsx)"','From a spreadsheet')+mi('impd','data-v="Google Sheets"','From Google Sheets')+mi('impd','data-v="another CRM"','From another CRM'),
+    hdr:d=>{const c=colOf(d.key);return mi('sortd',`data-k="${d.key}" data-d="1"`,'Sort ascending',ref('R11'))+mi('sortd',`data-k="${d.key}" data-d="-1"`,'Sort descending')+mi('cfopen',`data-k="${d.key}"`,'Filter',ref('R23'))+(d.key!=='name'?mi('hide',`data-k="${d.key}"`,'Hide column'):'')+'<div class="sep"></div>'+mi('insp',`data-k="${d.key}" data-s="0"`,'Insert column left',ref('R20'))+mi('insp',`data-k="${d.key}" data-s="1"`,'Insert column right')},
+    ins:d=>{const lay=L();const hid=lay.order.filter(k=>!lay.vis.includes(k));return `<div class="gh">Insert ${d.s==='1'?'right of':'left of'} ${colOf(d.k).l}</div>`+(hid.length?hid.map(k=>mi('ins',`data-k="${d.k}" data-s="${d.s}" data-n="${k}"`,colOf(k).l)).join(''):'<div class="pad">All fields are already shown.</div>')},
+    row:d=>{const r=byId(d.key);return mi('open',`data-id="${r.id}"`,'Open record')+'<div class="sep"></div>'+(S.arch?mi('rowunarc',`data-id="${r.id}"`,'Unarchive',ref('R25')):mi('rowarc',`data-id="${r.id}"`,'Archive',ref('R18')))+mi('rowdel',`data-id="${r.id}"`,'Delete',ref('R19'),'dng')}
+  };
+  function drawPop(){
+    const f=$r('#fl');f.innerHTML=POPS[pop.type](pop.data);f.hidden=false;
+    const ur=root.getBoundingClientRect(),ar=pop.anchor.getBoundingClientRect();
+    let x=ar.left-ur.left,y=ar.bottom-ur.top+4;
+    const w=f.offsetWidth;if(x+w>ur.width-8)x=Math.max(8,ur.width-w-8);
+    f.style.left=x+'px';f.style.top=y+'px';
+    const s=$('[data-f="srch"]',f);if(s&&pop.q){s.value=pop.q;filterList()}
+    const cv=$('[data-f="cv"]',f);if(cv)cv.focus();else if(s)s.focus()}
+  function openPop(type,anchor,data){
+    if(pop&&pop.type===type&&pop.anchor===anchor&&(pop.data.key||'')===((data&&data.key)||'')){closePop();return}
+    pop={type,anchor,data:data||{},q:''};drawPop()}
+  function closePop(){pop=null;const f=$r('#fl');f.hidden=true;f.innerHTML=''}
+  function filterList(){const f=$r('#fl'),q=($('[data-f="srch"]',f).value||'').toLowerCase();pop.q=q;$$('button[data-n]',f).forEach(b=>b.hidden=!!q&&!b.dataset.n.toLowerCase().includes(q));$$('[data-g]',f).forEach(g=>g.hidden=!!q)}
+
+  /* ---- dialogs ---- */
+  function dlg(html){const ov=$r('#ov'),dg=$r('#dg');dg.innerHTML=html;ov.hidden=false;
+    const top=-root.getBoundingClientRect().top;dg.style.marginTop=Math.max(0,Math.min(top+40,Math.max(0,root.offsetHeight-420)))+'px';
+    const f=$('input[type=text],textarea',dg);if(f)f.focus()}
+  const closeDlg=()=>{$r('#ov').hidden=true};
+  const foot=(ok,okc,label)=>`<div class="dlg-f"><button class="btn" type="button" data-act="cd">Cancel</button><button class="btn ${okc||'primary'}" type="button" data-act="${ok}">${label}</button></div>`;
+  function snack(html,cls){const s=$r('#snk');s.className='snk '+(cls||'');s.innerHTML=html;s.hidden=false}
+  function bulk(verb,ids,apply,done){
+    closeDlg();const n=ids.length;
+    snack(`<span>${verb} ${plural(n)}…</span><div class="pb"><i></i></div>${ref('R27')}`);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{const b=$r('.snk .pb i');if(b)b.style.width='100%'}));
+    setTimeout(()=>{
+      if(errGet()){snack(`<span>⚠ Couldn't ${verb.toLowerCase()} ${plural(n)}. The connection to the server was lost.</span><button class="btn sm" type="button" data-act="snkx">Dismiss</button>`,'err');return}
+      apply();clearSel();refresh();
+      snack(`<span>✓ ${done}</span>`,'ok');setTimeout(()=>{$r('#snk').hidden=true},3200)},1500)}
+  const D_={
+    save:(name,mode)=>dlg(`<div class="dlg-h">${mode==='new'?'Save as new filter':'Save filter'}</div><div class="dlg-b"><div class="fl"><span>Name</span><input type="text" data-f="nm" value="${esc(name)}" aria-label="Filter name"></div><div class="fl"><span>Visibility</span><select data-f="vis" aria-label="Visibility"><option>Private</option><option>Shared</option></select></div><p class="cap2">${S.conds.length} condition${S.conds.length===1?'':'s'}. The column layout is copied to the new filter.</p></div>${foot('savego','primary','Save')}`),
+    delflt:f=>dlg(`<div class="dlg-h">Delete "${esc(f.name)}"?</div><div class="dlg-b"><p>The filter and its column layout are removed${f.vis==='Shared'?' for everyone it is shared with':''}. The list goes back to All cars.</p></div>${foot('delfltgo','danger','Delete')}`),
+    arc:ids=>dlg(`<div class="dlg-h">Archive ${ids.length===1?esc(byId(ids[0]).name):plural(ids.length)}?</div><div class="dlg-b"><p>${ids.length===1?'The record becomes':'The records become'} read-only. Automations and API updates stop. ${ids.length===1?'It stays':'They stay'} in reports and in the Archived view.</p></div>${foot('arcgo','primary','Archive')}`),
+    del:ids=>dlg(`<div class="dlg-h">Delete ${ids.length===1?esc(byId(ids[0]).name):plural(ids.length)}?</div><div class="dlg-b"><p>This deletes ${ids.length===1?'the record':'the records'} and ${ids.length===1?'its':'their'} <b>notes, files and documents</b>.</p><p>Linked contacts, deals and projects are kept.</p><p class="cap2">You can restore ${ids.length===1?'it':'them'} from Restore data within 30 days.</p></div>${foot('delgo','danger','Delete')}`),
+    unarc:ids=>dlg(`<div class="dlg-h">Unarchive ${ids.length===1?esc(byId(ids[0]).name):plural(ids.length)}?</div><div class="dlg-b"><p>${ids.length===1?'The record returns':'The records return'} to the active list and can be edited again.</p></div>${foot('unarcgo','primary','Unarchive')}`),
+    bedit:()=>dlg(`<div class="dlg-h">Bulk edit ${plural(selIds().length)}</div><div class="dlg-b"><div class="fl"><span>Field</span><select data-f="bf" aria-label="Field"><option value="status">Status</option><option value="owner">Owner</option><option value="next">Next service due</option><option value="mileage">Mileage</option></select></div><div class="fl"><span>New value</span><span data-f="bvbox"></span></div><p class="cap2">${plural(selIds().length)} will be updated.</p></div>${foot('beditgo','primary','Update')}`),
+    mail:()=>{const ids=selIds(),rs=ids.map(byId),cs=[...new Set(rs.map(r=>r.contact).filter(Boolean))],miss=rs.filter(r=>!r.contact).length;
+      dlg(`<div class="dlg-h">Send group email</div><div class="dlg-b"><div class="fl"><span>To</span><div style="display:flex;gap:6px;flex-wrap:wrap">${cs.map(c=>`<span class="chipx">${esc(c)}</span>`).join('')||'<span class="cap2">No linked contacts</span>'}</div></div>${miss?`<p class="cap2">⚠ ${plural(miss)} ${miss===1?'has':'have'} no linked contact and will be skipped.</p>`:''}<div class="fl"><span>Subject</span><input type="text" data-f="sub" value="Your car service is coming up" aria-label="Subject"></div><div class="fl"><span>Message</span><textarea data-f="msg" aria-label="Message">Hello {{Contact name}},\n\nYour {{Car name}} is due for service soon.</textarea></div></div>${foot('mailgo','primary','Send')}`)},
+    act:()=>dlg(`<div class="dlg-h">Create activities for ${plural(selIds().length)}</div><div class="dlg-b"><div class="fl"><span>Type</span><select data-f="at" aria-label="Type"><option>Call</option><option>Meeting</option><option>Task</option></select></div><div class="fl"><span>Subject</span><input type="text" data-f="as" value="Book service" aria-label="Subject"></div><div class="fl"><span>Due date</span><input type="text" data-f="ad" value="Oct 20, 2026" aria-label="Due date"></div><div class="fl"><span>Assignee</span><select data-f="aw" aria-label="Assignee">${Object.keys(OWN).map(o=>`<option>${o}</option>`).join('')}</select></div><p class="cap2">One activity is created for each selected car.</p></div>${foot('actgo','primary',`Create ${selIds().length}`)}`),
+    exp:()=>dlg(`<div class="dlg-h">Export cars</div><div class="dlg-b"><p>Exports all <b>${plural(view().length)}</b> that match the current filter, not only the rows loaded on the page. The visible columns are included.</p><div class="fl"><span>Format</span><select data-f="fmt" aria-label="Format"><option>.csv</option><option>.xlsx</option></select></div></div>${foot('expgo','primary','Export')}`),
+    imp:src=>dlg(`<div class="dlg-h">Import cars from ${esc(src)}</div><div class="dlg-b"><div class="dzone"><span>Drop a file here, or</span><button class="btn sm" type="button" data-act="impf">Choose file</button></div><div data-f="impmap" hidden><div class="rrow"><div class="t"><b>cars-2026.csv</b><small>24 rows found</small></div></div><div class="rrow"><div class="t">Plate no. → <b>License plate</b></div><span class="pill green">Mapped</span></div><div class="rrow"><div class="t">Mileage (mi) → <b>Mileage</b></div><span class="pill green">Mapped</span></div><div class="rrow"><div class="t">Next service → <b>Next service due</b></div><span class="pill green">Mapped</span></div></div></div>${foot('impgo','primary','Import 24 cars')}`),
+    map:()=>{const g={};view().forEach(r=>(g[r.city]=g[r.city]||[]).push(r));
+      dlg(`<div class="dlg-h">Show on map</div><div class="dlg-b"><div class="mapb">${Object.keys(g).map(c=>`<button class="pin" type="button" data-act="pin" data-v="${c}" style="left:${CITY[c][0]}%;top:${CITY[c][1]}%" aria-label="${c}, ${plural(g[c].length)}">${g[c].length}</button>`).join('')}</div><div data-f="pinl" class="cap2">Click a pin to see its cars. ${plural(view().length)} shown.</div></div><div class="dlg-f"><button class="btn" type="button" data-act="cd">Close</button></div>`)},
+    rest:()=>dlg(`<div class="dlg-h">Restore data</div><div class="dlg-b"><p class="cap2">Cars deleted in the last 30 days.</p>${S.del.length?S.del.map(r=>`<div class="rrow"><div class="t"><b>${esc(r.name)}</b><small>Deleted by ${esc(r.by)} · ${r.on}</small></div><button class="btn sm" type="button" data-act="restgo" data-id="${r.id}">Restore</button></div>`).join(''):'<div class="cap2">Nothing to restore.</div>'}</div><div class="dlg-f"><button class="btn" type="button" data-act="cd">Close</button></div>`)
+  };
+  function bvbox(){const f=$r('[data-f="bf"]').value,b=$r('[data-f="bvbox"]');
+    b.innerHTML=f==='status'?`<select data-f="bv" aria-label="New value">${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>`:f==='owner'?`<select data-f="bv" aria-label="New value">${Object.keys(OWN).map(s=>`<option>${s}</option>`).join('')}</select>`:`<input type="text" data-f="bv" placeholder="${f==='next'?'Nov 20, 2026':'e.g. 90000'}" aria-label="New value">`}
+
+  /* ---- actions ---- */
+  let pend=null;
+  function condAdd(c){S.conds.push(c);if(S.sid)S.dirty=true;closePop();reset()}
+  function act(a,el){
+    const d=el?el.dataset:{};
+    const keepPop=['condk','tgcol'].includes(a);
+    if(!keepPop)closePop();
+    switch(a){
+      case 'vw':S.arch=d.v==='arc';$$('#vw button',root).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===d.v)));$r('#addb').hidden=S.arch;S.cfo.clear();S.cf={};reset();break;
+      case 'add':toast('Opens the Add car form');break;
+      case 'open':toast('Opens the record page (see Record Detail UX)');break;
+      case 'quick':S.quick=d.v;reset();break;
+      case 'own':S.owner=d.v;reset();break;
+      case 'filt':{const f=S.saved.find(x=>x.id===d.v);S.sid=f?f.id:null;S.conds=f?f.conds.map(c=>({...c})):[];S.dirty=false;S.sort=null;S.cf={};S.cfo.clear();reset();break}
+      case 'addflt':S.sid=null;S.conds=[];S.dirty=false;S.cf={};S.cfo.clear();reset();pop={type:'cond',anchor:$r('[data-pop="cond"]'),data:{},q:''};drawPop();break;
+      case 'delflt':D_.delflt(S.saved.find(f=>f.id===S.sid));break;
+      case 'delfltgo':{const id=S.sid;S.saved=S.saved.filter(f=>f.id!==id);delete S.lay[id];S.sid=null;S.conds=[];S.dirty=false;closeDlg();reset();toast('Filter deleted');break}
+      case 'condk':pop.data={k:d.k};pop.q='';drawPop();break;
+      case 'condv':condAdd({k:d.k,op:'is',val:d.v});break;
+      case 'condt':{const v=$r('[data-f="cv"]').value.trim();if(!v){toast('Type a value first');return}condAdd({k:d.k,op:'contains',val:v});break}
+      case 'conde':condAdd({k:d.k,op:'empty',val:''});break;
+      case 'rmcond':S.conds.splice(+d.v,1);if(S.sid)S.dirty=true;reset();break;
+      case 'rst':{const f=S.sid&&S.saved.find(x=>x.id===S.sid);S.conds=f?f.conds.map(c=>({...c})):[];S.dirty=false;reset();break}
+      case 'clear':S.conds=[];S.quick='all';S.owner='all';S.cf={};S.cfo.clear();if(S.sid)S.dirty=true;reset();break;
+      case 'save':pend='new';D_.save('Cars filter','new');break;
+      case 'savenew':pend='new';D_.save('Copy of '+S.saved.find(f=>f.id===S.sid).name,'new');break;
+      case 'savech':{const f=S.saved.find(x=>x.id===S.sid);f.conds=S.conds.map(c=>({...c}));S.dirty=false;refresh();toast('Filter "'+f.name+'" updated');break}
+      case 'savego':{const nm=$r('[data-f="nm"]').value.trim()||'Untitled filter';const id='s'+(sidn++);S.saved.push({id,name:nm,vis:$r('[data-f="vis"]').value,conds:S.conds.map(c=>({...c}))});S.lay[id]=JSON.parse(JSON.stringify(L()));S.sid=id;S.dirty=false;closeDlg();refresh();toast('Filter "'+nm+'" saved');break}
+      case 'review':S.sid=null;S.conds=[{k:'next',op:'empty',val:''}];S.dirty=false;reset();break;
+      case 'dis':S.dis[d.v]=true;renderBann();break;
+      case 'auto':toast('Opens the automation builder with the template "Archive cars automatically"');break;
+      case 'sort':{const k=d.k;S.sort=!S.sort||S.sort.k!==k?{k,d:1}:S.sort.d===1?{k,d:-1}:null;refresh();break}
+      case 'sortd':S.sort={k:d.k,d:+d.d};refresh();break;
+      case 'cfopen':S.cfo.add(d.k);renderGrid();setTimeout(()=>{const i=$r(`[data-cf="${d.k}"]`);if(i)i.focus()},0);break;
+      case 'hide':{const l=L();l.vis=l.vis.filter(k=>k!==d.k);refresh();toast('Column hidden. Saved for this filter.');break}
+      case 'insp':pop={type:'ins',anchor:$r(`[data-pop="hdr"][data-key="${d.k}"]`),data:{k:d.k,s:d.s},q:''};drawPop();break;
+      case 'ins':{const l=L();l.vis.push(d.n);l.order=l.order.filter(k=>k!==d.n);const i=l.order.indexOf(d.k);l.order.splice(i+(d.s==='1'?1:0),0,d.n);refresh();toast(colOf(d.n).l+' column added');break}
+      case 'tgcol':{const l=L();if(l.vis.includes(d.k))l.vis=l.vis.filter(k=>k!==d.k);else l.vis.push(d.k);drawPop();renderGrid();break}
+      case 'more':S.page++;refresh();break;
+      case 'selall':S.all=true;S.sel.clear();S.excl.clear();renderBulk();renderGrid();break;
+      case 'selclr':clearSel();renderBulk();renderGrid();break;
+      case 'barc':D_.arc(selIds());pend=selIds();break;
+      case 'bdel':D_.del(selIds());pend=selIds();break;
+      case 'bunarc':D_.unarc(selIds());pend=selIds();break;
+      case 'rowarc':pend=[+d.id];D_.arc(pend);break;
+      case 'rowdel':pend=[+d.id];D_.del(pend);break;
+      case 'rowunarc':pend=[+d.id];D_.unarc(pend);break;
+      case 'arcgo':case 'delgo':case 'unarcgo':{
+        const ids=pend,set=new Set(ids),single=ids.length===1&&!selIds().some(i=>set.has(i)&&selIds().length>1);
+        const run=()=>{S.rows.forEach(r=>{if(set.has(r.id)){if(a==='arcgo')r.arch=true;if(a==='unarcgo')r.arch=false}});
+          if(a==='delgo'){S.rows.filter(r=>set.has(r.id)).forEach(r=>S.del.unshift({...r,by:'James Miller',on:NOWD}));S.rows=S.rows.filter(r=>!set.has(r.id))}};
+        const verb=a==='arcgo'?'Archiving':a==='delgo'?'Deleting':'Unarchiving';
+        const done=ids.length+(a==='arcgo'?' archived':a==='delgo'?' deleted. Restore them from Restore data within 30 days.':' unarchived');
+        if(ids.length===1&&!el.dataset.bulk&&selIds().length<2){closeDlg();run();clearSel();refresh();toast(a==='arcgo'?'Record archived':a==='delgo'?'Record deleted. Restore it from Restore data within 30 days.':'Record unarchived')}
+        else bulk(verb,ids,run,plural(ids.length)+(a==='arcgo'?' archived':a==='delgo'?' deleted. Restore from Restore data within 30 days.':' unarchived'));
+        break}
+      case 'bedit':D_.bedit();bvbox();break;
+      case 'beditgo':{const f=$r('[data-f="bf"]').value,v=$r('[data-f="bv"]').value.trim();if(!v){toast('Enter a new value');return}const ids=new Set(selIds());
+        bulk('Updating',[...ids],()=>S.rows.forEach(r=>{if(ids.has(r.id))r[f]=f==='mileage'?(parseInt(v.replace(/\D/g,''))||r.mileage):v}),plural(ids.size)+' updated');break}
+      case 'bmail':D_.mail();break;
+      case 'mailgo':closeDlg();toast('Group email sent');break;
+      case 'bact':D_.act();break;
+      case 'actgo':{const n=selIds().length;closeDlg();toast(n+' activities created');break}
+      case 'exp':D_.exp();break;
+      case 'expgo':closeDlg();toast('Export started. You will get an email when the file is ready.');break;
+      case 'impd':D_.imp(d.v);break;
+      case 'impf':$r('[data-f="impmap"]').hidden=false;break;
+      case 'impgo':closeDlg();toast('Import started: 24 cars');break;
+      case 'map':D_.map();break;
+      case 'pin':{const l=view().filter(r=>r.city===d.v);$$('.pin',root).forEach(p=>p.classList.toggle('on',p.dataset.v===d.v));$r('[data-f="pinl"]').innerHTML=`<b>${d.v}</b> · ${l.map(r=>esc(r.name)).join(', ')}`;break}
+      case 'clean':S.dis.clean=false;S.sid=null;S.conds=[{k:'next',op:'empty',val:''}];S.dirty=false;reset();toast('Previewing cars with missing data');break;
+      case 'rest':D_.rest();break;
+      case 'restgo':{const i=S.del.findIndex(r=>r.id===+d.id),r=S.del.splice(i,1)[0];delete r.by;delete r.on;r.arch=false;S.rows.push(r);D_.rest();refresh();toast(r.name+' restored');break}
+      case 'cd':closeDlg();break;
+      case 'snkx':$r('#snk').hidden=true;break;
+    }
+  }
+  function startEdit(td){
+    const r=byId(td.parentNode.dataset.id),k=td.dataset.k;if(!r||td.querySelector('input,select'))return;
+    let el;if(k==='status'||k==='owner'){el=document.createElement('select');(k==='status'?STATUSES:Object.keys(OWN)).forEach(o=>{const op=document.createElement('option');op.textContent=o;el.appendChild(op)});el.value=r[k]}
+    else{el=document.createElement('input');el.type='text';el.value=r[k]??''}
+    el.setAttribute('aria-label','Edit '+colOf(k).l);td.innerHTML='';td.appendChild(el);el.focus();if(el.select&&el.type==='text')el.select();
+    let done=false;const end=save=>{if(done)return;done=true;
+      if(save){let v=el.value.trim();if(k==='mileage')v=parseInt(v.replace(/\D/g,''))||r.mileage;if(v!==r[k]){r[k]=v;toast('Saved')}}
+      renderGrid();renderBann()};
+    el.addEventListener('keydown',e=>{if(e.key==='Enter')end(true);if(e.key==='Escape')end(false)});
+    el.addEventListener('blur',()=>end(true));
+    if(el.tagName==='SELECT')el.addEventListener('change',()=>end(true))}
+
+  /* ---- events ---- */
+  root.addEventListener('click',e=>{
+    const p=e.target.closest('[data-pop]');
+    if(p){e.preventDefault();e.stopPropagation();openPop(p.dataset.pop,p,{key:p.dataset.key});return}
+    const a=e.target.closest('[data-act]');
+    if(a&&!a.disabled){e.preventDefault();if(['arcgo','delgo','unarcgo'].includes(a.dataset.act)&&selIds().length>1)a.dataset.bulk='1';act(a.dataset.act,a);return}
+    const td=e.target.closest('td[data-ed]');
+    if(td&&!e.target.closest('a,input,select')&&!S.arch){startEdit(td);return}
+    if(!e.target.closest('#fl'))closePop()});
+  root.addEventListener('change',e=>{
+    const t=e.target;
+    if(t.matches('[data-selhead]')){const sh=shownRows();if(t.checked){sh.forEach(r=>S.sel.add(r.id));S.all=false;S.excl.clear()}else clearSel();renderBulk();renderGrid()}
+    else if(t.matches('[data-sel]')){const id=+t.dataset.sel;if(S.all){t.checked?S.excl.delete(id):S.excl.add(id)}else{t.checked?S.sel.add(id):S.sel.delete(id)}renderBulk();renderGrid()}
+    else if(t.matches('[data-f="bf"]'))bvbox()});
+  root.addEventListener('input',e=>{
+    const t=e.target;
+    if(t.matches('[data-f="srch"]'))filterList();
+    if(t.matches('[data-cf]')){S.cf[t.dataset.cf]=t.value;const pos=t.selectionStart;S.page=1;renderBar();renderBulk();const keep=t.dataset.cf;const body=view();
+      // re-render rows only, keep the filter box focused
+      const g=$r('#grid');const sx=g.scrollLeft;renderGrid();renderFoot();const i=$r(`[data-cf="${keep}"]`);if(i){i.focus();i.setSelectionRange(pos,pos)}g.scrollLeft=sx}});
+  root.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){if(!$r('#ov').hidden)closeDlg();else closePop()}
+    if(e.key==='Enter'&&e.target.matches('[data-f="cv"]'))$r('[data-act="condt"]').click()});
+  document.addEventListener('click',e=>{if(!root.contains(e.target))closePop()});
+  /* hover cards */
+  root.addEventListener('mouseover',e=>{
+    const t=e.target.closest('[data-hc]'),hc=$r('#hc');
+    if(!t){hc.hidden=true;return}
+    const [ty,v]=[t.dataset.hc.slice(0,3),t.dataset.hc.slice(4)];let h='';
+    if(ty==='own'){const o=initials(v),n=S.rows.filter(r=>r.owner===v&&!r.arch).length;h=`<div class="r"><span class="av ${o[1]}">${o[0]}</span><div><b>${esc(v)}</b><br><small>${o[3]}</small></div></div><div><small>${o[2]}</small></div><div>Owns <b>${plural(n)}</b></div>`}
+    else{const r=byId(v);if(!r)return;h=`<b>${esc(r.name)}</b><div><span class="pill ${SPILL[r.status]||''}">${r.status}</span> <small>${esc(r.make)} · ${r.year}</small></div><div><small>Mileage</small> ${disp(r,'mileage')}</div><div><small>Owner</small> ${esc(r.owner)}</div><div><small>Next service</small> ${r.next||'Missing'}</div>`}
+    hc.innerHTML=h;hc.hidden=false;
+    const ur=root.getBoundingClientRect(),ar=t.getBoundingClientRect();
+    hc.style.left=Math.max(8,Math.min(ar.left-ur.left,ur.width-hc.offsetWidth-8))+'px';hc.style.top=(ar.bottom-ur.top+6)+'px'});
+  root.addEventListener('mouseleave',()=>{$r('#hc').hidden=true});
+  /* drag to reorder */
+  root.addEventListener('dragstart',e=>{const th=e.target.closest&&e.target.closest('th[data-col]');if(!th)return;dragK=th.dataset.col;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',dragK)}catch(_){}});
+  root.addEventListener('dragover',e=>{const th=e.target.closest('th[data-col]');if(!th||!dragK)return;e.preventDefault();$$('th.dragover',root).forEach(x=>x.classList.remove('dragover'));if(th.dataset.col!==dragK)th.classList.add('dragover')});
+  root.addEventListener('drop',e=>{const th=e.target.closest('th[data-col]');if(!th||!dragK)return;e.preventDefault();const l=L(),to=th.dataset.col;if(to!==dragK){l.order=l.order.filter(k=>k!==dragK);l.order.splice(l.order.indexOf(to),0,dragK);dragK=null;refresh();toast('Column order saved for this filter')}dragK=null});
+  root.addEventListener('dragend',()=>{dragK=null;$$('th.dragover',root).forEach(x=>x.classList.remove('dragover'))});
+  /* resize */
+  root.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-rz]');if(!h)return;e.preventDefault();e.stopPropagation();const k=h.dataset.rz,c=colOf(k),l=L(),x0=e.clientX,w0=l.w[k]||c.w;
+    const mv=ev=>{l.w[k]=Math.max(70,w0+ev.clientX-x0);const th=h.parentNode;th.style.width=l.w[k]+'px';const t=th.closest('table');t.style.width=(parseFloat(t.style.width)+0)+'px'};
+    const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);renderGrid();toast('Column width saved for this filter')};
+    document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up)});
+  root.addEventListener('dragstart',e=>{if(e.target.closest&&e.target.closest('[data-rz]'))e.preventDefault()},true);
+
+  refresh();
+  return {simulate(){const r=mk(++nid,'Toyota RAV4 111 AAA','111 AAA','Toyota','Available',12000,'Apr 2, 2027','Emily Johnson',2024,'2T3P1RFV5RW111999',NOWD,'Chicago','Sarah Thompson');S.rows.unshift(r);S.fresh=r.id;S.page=Math.max(S.page,1);refresh();toast('Emily Johnson added Toyota RAV4 111 AAA');setTimeout(()=>{S.fresh=null},2600)}}
+}
+
+/* ---------------- Mockup wiring ---------------- */
+function seg(el,cb){el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('button',el).forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));cb(b.dataset.v)})}
+let errR=false,errA=false;
+const lstR=buildList($('#lstR'),false,()=>errR);
+const lstA=buildList($('#lstA'),true,()=>errA);
+seg($('#segIds'),v=>$('#stgR').dataset.ids=v);
+seg($('#segIdsA'),v=>$('#stgA').dataset.ids=v);
+seg($('#segErr'),v=>errR=v==='err');
+seg($('#segErrA'),v=>errA=v==='err');
+$('#simR').addEventListener('click',()=>lstR.simulate());
+$('#simA').addEventListener('click',()=>lstA.simulate());
+</script>
+
+</body></html>
